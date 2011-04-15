@@ -18,9 +18,10 @@ exports.execute = function(ctx) {
     case 'POST': post(ctx); break;
     default:
       res.writeHead(405, {'Allow': 'GET, POST'});
-      res.end();
+      res.end('Invalid method');
   }
 };
+
 
 function post(ctx) {
   var data = '';
@@ -32,13 +33,15 @@ function post(ctx) {
   });
 }
 
+
 function execute(ctx, q) {
   var res = ctx.get('response');
+  var host = ctx.get('baseurl');
 
   if (q.camliversion != 1) {
     console.log('Bad camliversion');
     res.writeHead(400, {});
-    res.end();
+    res.end('Bad camliversion');
     return;
   }
 
@@ -62,7 +65,7 @@ function execute(ctx, q) {
           if (err) {
             sendError(res, err);
           } else {
-            sendResponse(res, items.map(function(item) {
+            sendResponse(res, host, items.map(function(item) {
               return {
                 'blobRef': item.blobref,
                 'size': item.size
@@ -73,23 +76,25 @@ function execute(ctx, q) {
       }
     });    
   } else {
-    sendResponse(res, []);
+    sendResponse(res, host, []);
   }
 }
 
-function sendResponse(res, stat) {
+
+function sendResponse(res, host, stat) {
   res.writeHead(200, {'Content-Type': 'text/javascript'});
   res.end(JSON.stringify({
     'stat': stat,
     'maxUploadSize': 10485760, // 10MB for now, experiment with grid store.
-    'uploadUrl': '', // TODO
+    'uploadUrl': host + '/camli/upload/',
     'uploadUrlExpirationSeconds': 7200,
     'canLongPoll': false  // false for now.
   }));
 }
 
+
 function sendError(res, err) {
   console.log(err.stack);
   res.writeHead(500, {});
-  res.end();
+  res.end(err.message);
 }
